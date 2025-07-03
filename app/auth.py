@@ -90,9 +90,16 @@ async def authenticate_user(phone: str, password: str):
     """Authenticate user by phone and password"""
     db = get_database()
     
-    # Check if admin (hardcoded admin credentials)
+    # Check admins collection first
+    admin = await db.admins.find_one({"phone": phone})
+    if admin and verify_password(password, admin["password"]):
+        admin["id"] = str(admin["_id"])
+        admin["role"] = "admin"
+        return admin
+    
+    # Fallback to hardcoded admin (for backward compatibility during migration)
     if phone == "admin123" and password == "admin123":
-        return {"phone": phone, "role": "admin", "name": "Admin User"}
+        return {"phone": phone, "role": "admin", "name": "Admin User", "isSuperAdmin": True}
     
     # Check doctors
     doctor = await db.doctors.find_one({"phone": phone})

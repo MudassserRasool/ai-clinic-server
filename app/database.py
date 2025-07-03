@@ -35,6 +35,11 @@ async def create_indexes():
         return
         
     try:
+        # Admins collection indexes
+        admins_collection = database.db.admins
+        await admins_collection.create_index("phone", unique=True)
+        await admins_collection.create_index("isSuperAdmin")
+        
         # Doctors collection indexes
         doctors_collection = database.db.doctors
         await doctors_collection.create_index("phone", unique=True)

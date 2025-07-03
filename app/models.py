@@ -32,6 +32,29 @@ class Token(BaseModel):
     token_type: str
     user: dict
 
+# Admin Models
+class AdminBase(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+
+class AdminCreate(AdminBase):
+    password: str
+
+class AdminUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+
+class Admin(AdminBase):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    isSuperAdmin: bool = False
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        populate_by_name = True
+        json_encoders = {ObjectId: str}
+
 # Doctor Models
 class DoctorBase(BaseModel):
     name: str

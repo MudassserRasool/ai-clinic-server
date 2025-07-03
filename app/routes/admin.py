@@ -2,11 +2,96 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List
 from bson import ObjectId
 from datetime import datetime
-from ..models import DoctorCreate, Doctor, DoctorUpdate
+from ..models import DoctorCreate, Doctor, DoctorUpdate, AdminCreate
 from ..auth import get_current_admin, get_password_hash
 from ..database import get_database
 
 router = APIRouter()
+
+@router.post("/setup", response_model=dict)
+async def setup_initial_admin(admin_data: AdminCreate):
+    """Create the first admin account (only works when no admins exist)"""
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Database connection not available"
+        )
+    
+    # Check if any admin already exists
+    admin_count = await db.admins.count_documents({})
+    if admin_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Admin setup already completed. Use the regular admin creation endpoint."
+        )
+    
+    # Hash the password
+    hashed_password = get_password_hash(admin_data.password)
+    
+    # Create first admin (automatically becomes super admin)
+    admin_dict = admin_data.model_dump(exclude={"password"})
+    admin_dict["password"] = hashed_password
+    admin_dict["isSuperAdmin"] = True
+    admin_dict["createdAt"] = datetime.utcnow()
+    admin_dict["updatedAt"] = datetime.utcnow()
+    
+    # Insert admin
+    result = await db.admins.insert_one(admin_dict)
+    
+    return {
+        "message": "Initial admin setup completed successfully",
+        "admin_id": str(result.inserted_id),
+        "isSuperAdmin": True
+    }
+
+@router.post("/create", response_model=dict)
+async def create_admin(
+    admin_data: AdminCreate,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a new admin account (requires super admin privileges)"""
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Database connection not available"
+        )
+    
+    # Check if current admin is super admin or if this is the first admin
+    admin_count = await db.admins.count_documents({})
+    if admin_count > 0 and not current_admin.get("isSuperAdmin", False):
+        raise HTTPException(
+            status_code=403,
+            detail="Only super admin can create new admin accounts"
+        )
+    
+    # Check if admin with this phone already exists
+    existing_admin = await db.admins.find_one({"phone": admin_data.phone})
+    if existing_admin:
+        raise HTTPException(
+            status_code=400,
+            detail="Admin with this phone number already exists"
+        )
+    
+    # Hash the password
+    hashed_password = get_password_hash(admin_data.password)
+    
+    # Create admin document
+    admin_dict = admin_data.model_dump(exclude={"password"})
+    admin_dict["password"] = hashed_password
+    admin_dict["isSuperAdmin"] = admin_count == 0  # First admin becomes super admin
+    admin_dict["createdAt"] = datetime.utcnow()
+    admin_dict["updatedAt"] = datetime.utcnow()
+    
+    # Insert admin
+    result = await db.admins.insert_one(admin_dict)
+    
+    return {
+        "message": "Admin created successfully",
+        "admin_id": str(result.inserted_id),
+        "isSuperAdmin": admin_dict["isSuperAdmin"]
+    }
 
 @router.post("/doctors", response_model=dict)
 async def create_doctor(
