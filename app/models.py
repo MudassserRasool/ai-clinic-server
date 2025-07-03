@@ -24,7 +24,7 @@ class UserBase(BaseModel):
     name: str
 
 class UserLogin(BaseModel):
-    phone: str
+    username: str  # phone number
     password: str
 
 class Token(BaseModel):

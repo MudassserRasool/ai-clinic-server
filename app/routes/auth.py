@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from ..models import UserLogin, Token
 from ..auth import authenticate_user, create_access_token
 
 router = APIRouter()
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(user_data: UserLogin):
     """Login endpoint for both doctors and admin"""
-    user = await authenticate_user(form_data.username, form_data.password)
+    user = await authenticate_user(user_data.username, user_data.password)
     
     if not user:
         raise HTTPException(
@@ -34,6 +33,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     }
 
 @router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_for_access_token(user_data: UserLogin):
     """OAuth2 compatible token endpoint"""
-    return await login(form_data) 
+    return await login(user_data) 
