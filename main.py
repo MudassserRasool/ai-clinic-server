@@ -2,6 +2,7 @@ import uvicorn
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 from contextlib import asynccontextmanager
 
 from app.config import settings
@@ -38,7 +39,13 @@ app = FastAPI(
     title="Doctor Assistant API",
     description="AI-powered medical assistant system for doctors",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    # Define only bearer token security scheme
+    openapi_tags=[
+        {"name": "Authentication", "description": "Login and token management"},
+        {"name": "Admin", "description": "Admin operations"},
+        {"name": "Doctor", "description": "Doctor operations"},
+    ]
 )
 
 # Configure CORS

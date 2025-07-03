@@ -3,7 +3,7 @@ from typing import Optional, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from .config import settings
 from .database import get_database
 from .models import Doctor
@@ -12,8 +12,8 @@ from bson import ObjectId
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# OAuth2 scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# HTTP Bearer scheme for JWT tokens
+security = HTTPBearer()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
@@ -46,8 +46,9 @@ async def verify_token(token: str) -> dict:
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get current authenticated user"""
+    token = credentials.credentials
     payload = await verify_token(token)
     phone = payload.get("sub")
     role = payload.get("role")
