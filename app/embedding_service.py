@@ -61,6 +61,8 @@ class EmbeddingService:
             Combined clinical text string with demographics
         """
         text_parts = []
+
+        
         
         # Add patient demographics (age group is important for medical similarity)
         if patient_data:
@@ -95,6 +97,12 @@ class EmbeddingService:
             Combined clinical text string focused on symptoms and conditions
         """
         text_parts = []
+                #  for gender, age, weight, height, blood pressure, oxygen level, and other vitals
+        if "gender" in visit_data:
+            text_parts.append(f"Gender: {visit_data['gender']}")
+        if "age" in visit_data:
+            text_parts.append(f"Age: {visit_data['age']}")
+       
         
         # Add vitals information (important for medical condition matching)
         if "vitals" in visit_data:
@@ -176,8 +184,12 @@ class EmbeddingService:
             Embedding vector as list of floats
         """
         clinical_text = self.create_clinical_text(visit_data)
-        logger.info(f"Generating embedding for clinical text: {clinical_text[:100]}...")
-        return self.embed_text(clinical_text)
+        # create_clinical_text_with_demographics 
+        demographics_text = self.create_clinical_text_with_demographics(visit_data)
+        # combine the two texts
+        combined_text = f"{clinical_text} {demographics_text}"
+        logger.info(f"Generating embedding for clinical text: {combined_text[:100]}...")
+        return self.embed_text(combined_text)
     
     def find_similar_visits(self, query_embedding: List[float], stored_embeddings: List[Dict], 
                           top_k: int = 5, min_similarity: float = 0.1) -> List[Tuple[Dict, float]]:
@@ -229,6 +241,7 @@ class EmbeddingService:
         """
         try:
             # Generate embedding for the query text
+            logger.info(f"......Generating embedding for query text: {query_text[:10000]}...")
             query_embedding = self.embed_text(query_text)
             
             # Find similar visits
