@@ -18,7 +18,10 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingService:
     def __init__(self):
-        self.model_name = "emilyalsentzer/Bio_ClinicalBERT"
+        # self.model_name = "biobert-sentence-transformers" # "emilyalsentzer/Bio_ClinicalBERT"
+        # self.model_name = "stanford-crfm/BioMedLM"
+        self.model_name = "microsoft/BiomedVLP-CXR-BERT-general"
+
         self.tokenizer = None
         self.model = None
         
@@ -78,7 +81,7 @@ class EmbeddingService:
                 text_parts.append(f"Age group: {age_group}")
             
             if patient_data.get("gender"):
-                text_parts.append(f"Gender: {patient_data['gender']}")
+                text_parts.append(f"Gender: {patient_data['gender']}; ")
         
         # Add the clinical text (without medications)
         clinical_text = self.create_clinical_text(visit_data)
@@ -99,24 +102,24 @@ class EmbeddingService:
         text_parts = []
                 #  for gender, age, weight, height, blood pressure, oxygen level, and other vitals
         if "gender" in visit_data:
-            text_parts.append(f"Gender: {visit_data['gender']}")
+            text_parts.append(f"Gender: {visit_data['gender']}; ")
         if "age" in visit_data:
-            text_parts.append(f"Age: {visit_data['age']}")
+            text_parts.append(f"Age: {visit_data['age']}; ")
        
         
         # Add vitals information (important for medical condition matching)
         if "vitals" in visit_data:
             vitals = visit_data["vitals"]
-            text_parts.append(f"Blood pressure: {vitals.get('bloodPressure', '')}")
-            text_parts.append(f"Oxygen level: {vitals.get('oxygen', '')}")
-            text_parts.append(f"Weight: {vitals.get('weight', '')}")
+            text_parts.append(f"Blood pressure: {vitals.get('bloodPressure', '')}; ")
+            text_parts.append(f"Oxygen level: {vitals.get('oxygen', '')}; ")
+            text_parts.append(f"Weight: {vitals.get('weight', '')}; ")
         
         # Add clinical observations (symptoms and test results)
         if visit_data.get("clinicalTests"):
-            text_parts.append(f"Clinical tests: {visit_data['clinicalTests']}")
+            text_parts.append(f"Clinical tests: {visit_data['clinicalTests']}; ")
         
         if visit_data.get("doctorNoticed"):
-            text_parts.append(f"Doctor observations: {visit_data['doctorNoticed']}")
+            text_parts.append(f"Doctor observations: {visit_data['doctorNoticed']}; ")
         
         # REMOVED: Prescribed medications - we want to find similar conditions, not similar treatments
         # This allows doctors to see how different cases with similar symptoms were treated
@@ -124,7 +127,7 @@ class EmbeddingService:
         # Recovery status (indicates severity and outcome)
         if "vitals" in visit_data and "didRecover" in visit_data["vitals"]:
             recovery_status = "recovered" if visit_data["vitals"]["didRecover"] else "in treatment"
-            text_parts.append(f"Patient status: {recovery_status}")
+            text_parts.append(f"Patient status: {recovery_status}; ")
         
         return ". ".join(filter(None, text_parts))
     
@@ -187,8 +190,14 @@ class EmbeddingService:
         # create_clinical_text_with_demographics 
         demographics_text = self.create_clinical_text_with_demographics(visit_data)
         # combine the two texts
-        combined_text = f"{clinical_text} {demographics_text}"
-        logger.info(f"Generating embedding for clinical text: {combined_text[:100]}...")
+        # combined_text = f"{clinical_text} {demographics_text}"
+        combined_text = (
+           f"Age and other patient information: {demographics_text}. "
+           f"Patient characteristics include: {demographics_text}. "
+           f"{clinical_text}"
+        )
+
+        logger.info(f"Generating embedding for clinical text: {combined_text[:1000]}...")
         return self.embed_text(combined_text)
     
     def find_similar_visits(self, query_embedding: List[float], stored_embeddings: List[Dict], 
