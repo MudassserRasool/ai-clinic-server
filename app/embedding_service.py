@@ -51,34 +51,69 @@ class EmbeddingService:
             logger.error(f"Error loading Bio_ClinicalBERT model: {e}")
             raise e
     
-    def create_clinical_text(self, visit_data: Dict) -> str:
+    def create_clinical_text_with_demographics(self, visit_data: Dict, patient_data: Dict = None) -> str:
         """
-        Combine clinical data into a single text string for embedding generation
+        Combine clinical data with patient demographics for embedding generation
         Args:
             visit_data: Dictionary containing clinical information
+            patient_data: Dictionary containing patient demographics (age, gender)
         Returns:
-            Combined clinical text string
+            Combined clinical text string with demographics
         """
         text_parts = []
         
-        # Add vitals information
+        # Add patient demographics (age group is important for medical similarity)
+        if patient_data:
+            if patient_data.get("age"):
+                age = patient_data["age"]
+                # Convert age to age group for better matching
+                if age < 18:
+                    age_group = "pediatric"
+                elif age < 65:
+                    age_group = "adult"
+                else:
+                    age_group = "elderly"
+                text_parts.append(f"Age group: {age_group}")
+            
+            if patient_data.get("gender"):
+                text_parts.append(f"Gender: {patient_data['gender']}")
+        
+        # Add the clinical text (without medications)
+        clinical_text = self.create_clinical_text(visit_data)
+        if clinical_text:
+            text_parts.append(clinical_text)
+        
+        return ". ".join(filter(None, text_parts))
+    
+    def create_clinical_text(self, visit_data: Dict) -> str:
+        """
+        Combine clinical data into a single text string for embedding generation
+        IMPORTANT: Excludes prescribed medications to focus on medical conditions and symptoms
+        Args:
+            visit_data: Dictionary containing clinical information
+        Returns:
+            Combined clinical text string focused on symptoms and conditions
+        """
+        text_parts = []
+        
+        # Add vitals information (important for medical condition matching)
         if "vitals" in visit_data:
             vitals = visit_data["vitals"]
             text_parts.append(f"Blood pressure: {vitals.get('bloodPressure', '')}")
             text_parts.append(f"Oxygen level: {vitals.get('oxygen', '')}")
             text_parts.append(f"Weight: {vitals.get('weight', '')}")
         
-        # Add clinical observations
+        # Add clinical observations (symptoms and test results)
         if visit_data.get("clinicalTests"):
             text_parts.append(f"Clinical tests: {visit_data['clinicalTests']}")
         
         if visit_data.get("doctorNoticed"):
             text_parts.append(f"Doctor observations: {visit_data['doctorNoticed']}")
         
-        if visit_data.get("prescribedMedications"):
-            text_parts.append(f"Prescribed medications: {visit_data['prescribedMedications']}")
+        # REMOVED: Prescribed medications - we want to find similar conditions, not similar treatments
+        # This allows doctors to see how different cases with similar symptoms were treated
         
-        # Recovery status
+        # Recovery status (indicates severity and outcome)
         if "vitals" in visit_data and "didRecover" in visit_data["vitals"]:
             recovery_status = "recovered" if visit_data["vitals"]["didRecover"] else "in treatment"
             text_parts.append(f"Patient status: {recovery_status}")
