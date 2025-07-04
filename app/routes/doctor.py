@@ -157,6 +157,71 @@ async def create_visit(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating visit: {str(e)}")
 
+@router.get("/visits")
+async def get_doctor_visits(
+    current_doctor: dict = Depends(get_current_doctor),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100)
+):
+    """Get all visits created by the current doctor"""
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Database connection not available"
+        )
+    
+    try:
+        # Build aggregation pipeline to get visits with patient info
+        pipeline = [
+            {"$match": {"doctorId": ObjectId(current_doctor["id"])}},
+            {
+                "$lookup": {
+                    "from": "patients",
+                    "localField": "patientId", 
+                    "foreignField": "_id",
+                    "as": "patient"
+                }
+            },
+            {"$unwind": "$patient"},
+            {"$sort": {"createdAt": -1}},
+            {"$skip": skip},
+            {"$limit": limit}
+        ]
+        
+        visits = []
+        async for visit in db.visits.aggregate(pipeline):
+            visit_data = {
+                "id": str(visit["_id"]),
+                "patient": {
+                    "id": str(visit["patient"]["_id"]),
+                    "name": visit["patient"]["name"],
+                    "age": visit["patient"]["age"],
+                    "gender": visit["patient"]["gender"],
+                    "phone": visit["patient"]["phone"],
+                    "address": visit["patient"].get("address", "")
+                },
+                "vitals": visit.get("vitals", {}),
+                "clinicalTests": visit.get("clinicalTests", ""),
+                "doctorNoticed": visit.get("doctorNoticed", ""),
+                "prescribedMedications": visit.get("prescribedMedications", ""),
+                "date": visit["date"].isoformat() if visit.get("date") else visit["createdAt"].isoformat()
+            }
+            visits.append(visit_data)
+        
+        # Get total count for pagination
+        total_count = await db.visits.count_documents({"doctorId": ObjectId(current_doctor["id"])})
+        
+        return {
+            "visits": visits,
+            "total": total_count,
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching visits: {str(e)}")
+
 @router.post("/chat", response_model=dict)
 async def chat_with_assistant(
     chat_query: ChatQuery,
