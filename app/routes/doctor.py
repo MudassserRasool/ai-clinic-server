@@ -9,7 +9,8 @@ from ..models import (
 from ..auth import get_current_doctor
 from ..database import get_database
 from ..embedding_service import embedding_service
-
+import google.generativeai as genai
+from ..config.config import settings
 router = APIRouter()
 
 @router.get("/me")
@@ -264,7 +265,10 @@ async def chat_with_assistant(
         similar_cases = embedding_service.query_similar_cases(
             chat_query.message, stored_embeddings, top_k=3
         )
-        
+        genai.configure(api_key=settings.gimini_api_key)
+
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+    # response = model.generate_content("What are the symptoms of pneumonia?")
         # Format response
         if similar_cases:
             response_text = f"Based on your query '{chat_query.message}', I found {len(similar_cases)} similar cases:\n\n"
@@ -287,9 +291,19 @@ async def chat_with_assistant(
                 response_text += f"- Observations: {case_data['clinical_data']['doctorNoticed']}\n"
                 response_text += f"- Treatment: {case_data['clinical_data']['prescribedMedications']}\n"
                 response_text += f"- Outcome: {'Recovered' if case_data['clinical_data']['vitals'].get('didRecover') else 'In Treatment'}\n\n"
+            # Generate medication suggestions based on the similar cases
+            suggestion_prompt = f"Based on these similar medical cases, suggest appropriate medications. Only return a comma-separated list of medication names:\n{response_text}"
+            suggested_meds_response = model.generate_content(suggestion_prompt)
+            suggested_meds_text = suggested_meds_response.text.strip()
+            
+            if suggested_meds_text:
+                medication_suggestion = f"Based on these similar cases, you might consider the following medications: {suggested_meds_text}."
+                response_text += f"\n**Medication Suggestion:** {medication_suggestion}\n"
+
         else:
             response_text = "I couldn't find any similar cases matching your query. This might be a unique case that requires careful consideration."
             case_summaries = []
+        
         
         return {
             "response": response_text,

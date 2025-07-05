@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 from contextlib import asynccontextmanager
 
-from app.config import settings
-from app.database import connect_to_mongo, close_mongo_connection
+from app.config.config import settings
+from app.preprocessors.database import connect_to_mongo, close_mongo_connection
 from app.embedding_service import embedding_service
 from app.routes import auth, admin, doctor
 

@@ -21,6 +21,7 @@ class EmbeddingService:
         # self.model_name = "biobert-sentence-transformers" # "emilyalsentzer/Bio_ClinicalBERT"
         # self.model_name = "stanford-crfm/BioMedLM"
         self.model_name = "microsoft/BiomedVLP-CXR-BERT-general"
+        # self.model_name = "microsoft/BioGPT"
 
         self.tokenizer = None
         self.model = None
@@ -54,6 +55,22 @@ class EmbeddingService:
             logger.error(f"Error loading Bio_ClinicalBERT model: {e}")
             raise e
     
+
+    #  create a function that takes in a visit_data and patient_data and returns a string that is the clinical text with demographics AND based on his clinical training tell what medican need to use
+    # def suggest_medication(self, patient_data: str) -> str:
+    #     # clinical_summary = self.generate_clinical_summary(visit_data, patient_data)
+
+    #     # Tokenize & generate
+    #     inputs = self.tokenizer(patient_data, return_tensors="pt", truncation=True).to(self.device)
+    #     with torch.no_grad():
+    #         outputs = self.model.generate(**inputs, max_length=256, do_sample=True, temperature=0.7)
+
+    #     # Decode result
+    #     answer = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+    #     return answer[len(patient_data):].strip()
+    
+
+
     def create_clinical_text_with_demographics(self, visit_data: Dict, patient_data: Dict = None) -> str:
         """
         Combine clinical data with patient demographics for embedding generation

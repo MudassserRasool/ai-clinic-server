@@ -4,8 +4,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from .config import settings
-from .database import get_database
+from .config.config import settings
+from .preprocessors.database import get_database
 from .models import Doctor
 from bson import ObjectId
 
