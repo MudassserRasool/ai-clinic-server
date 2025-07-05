@@ -4,7 +4,7 @@ from bson import ObjectId
 from datetime import datetime
 from ..models import DoctorCreate, Doctor, DoctorUpdate, AdminCreate
 from ..auth import get_current_admin, get_password_hash
-from ..database import get_database
+from ..preprocessors.database import get_database
 
 router = APIRouter()
 

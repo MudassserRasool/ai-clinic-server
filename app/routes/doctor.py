@@ -7,7 +7,7 @@ from ..models import (
     ChatQuery, ChatResponse, SimilarCase
 )
 from ..auth import get_current_doctor
-from ..database import get_database
+from ..preprocessors.database import get_database
 from ..embedding_service import embedding_service
 import google.generativeai as genai
 from ..config.config import settings
