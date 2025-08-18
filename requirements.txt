@@ -1,6 +1,6 @@
 fastapi==0.104.1
 anyio==3.7.1, <4.0.0
-google-genai==1.18.0
+google-genai==1.16.1
 uvicorn==0.24.0
 uvloop==0.21.0
 httptools==0.6.4
