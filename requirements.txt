@@ -1,5 +1,4 @@
 fastapi==0.116.1
-#   anyio<5.0.0 and >=4.8.0
 anyio==4.8.0 <5.0.0
 google-genai==1.26.0
 uvicorn==0.24.0
